@@ -77,7 +77,7 @@ jobs:
         target_os = ["linux"]
         EOF
         
-        gclient sync --force
+        gclient sync --force --no-history
 
     - name: "🛠️ Bước 7: TIẾN HÀNH ĐÈ FILE MOD trực tiếp bằng lệnh Workflow"
       run: |
