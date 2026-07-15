@@ -1,4 +1,4 @@
-name: TizenTube Linux ARM64 Auto-Build (Platform Fixed)
+name: TizenTube Linux ARM64 Auto-Build (GN Dependency Fixed)
 
 on:
   workflow_dispatch: # Cho phép bấm nút chạy thủ công
@@ -56,7 +56,7 @@ jobs:
         git clone https://chromium.googlesource.com/chromium/tools/depot_tools.git $GITHUB_WORKSPACE/depot_tools
         echo "$GITHUB_WORKSPACE/depot_tools" >> $GITHUB_PATH
 
-    - name: "📦 Bước 6: Đồng bộ nguồn TizenTubeCobalt vào Workspace (Bản siêu tốc)"
+    - name: "📦 Bước 6: Đồng bộ nguồn TizenTubeCobalt vào Workspace (Bản chuẩn dependencies)"
       run: |
         mkdir -p $GITHUB_WORKSPACE/cobalt-build
         cd $GITHUB_WORKSPACE/cobalt-build
@@ -64,7 +64,7 @@ jobs:
         # 1. Chỉ lấy duy nhất code bản mới nhất của repo chính
         git clone --depth=1 https://github.com/reisxd/TizenTubeCobalt.git src
         
-        # 2. Tạo file cấu hình .gclient và chặn các thư mục rác
+        # 2. Tạo file cấu hình .gclient chuẩn (Bỏ phần custom_deps gây thiếu file BUILD.gn)
         cat <<EOF > .gclient
         solutions = [
           {
@@ -72,20 +72,12 @@ jobs:
             "url": "https://github.com/reisxd/TizenTubeCobalt.git",
             "deps_file": "DEPS",
             "managed": False,
-            "custom_deps": {
-              "src/third_party/catapult": None,
-              "src/third_party/android_deps": None,
-              "src/content/test/data": None,
-              "src/media/test/data": None,
-              "src/third_party/blink/perf_tests": None,
-              "src/third_party/hunspell_dictionaries": None,
-            },
           },
         ]
         target_os = ["linux"]
         EOF
         
-        # 3. Đồng bộ hóa nguồn siêu tốc
+        # 3. Đồng bộ hóa nguồn siêu tốc (đầy đủ file nền tảng Linux)
         gclient sync --force --no-history
 
     - name: "🛠️ Bước 7: TIẾN HÀNH ĐÈ FILE MOD trực tiếp bằng lệnh Workflow"
@@ -101,7 +93,7 @@ jobs:
           cp $GITHUB_WORKSPACE/custom-repo/custom_files/key_mapping.cc $GITHUB_WORKSPACE/cobalt-build/src/starboard/shared/x11/key_mapping.cc
         fi
 
-    - name: "🏗️ Bước 8: Tạo cấu hình GN (Đổi sang profile evergreen-arm64 chuẩn chỉ)"
+    - name: "🏗️ Bước 8: Tạo cấu hình GN"
       run: |
         cd $GITHUB_WORKSPACE/cobalt-build/src
         python3 cobalt/build/gn.py -p evergreen-arm64 -c gold --args="ccache_enable=true"
