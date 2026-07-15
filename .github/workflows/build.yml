@@ -52,7 +52,7 @@ jobs:
         mkdir -p ~/cobalt-build
         cd ~/cobalt-build
         gclient config --name=src https://github.com/reisxd/TizenTubeCobalt.git
-        gclient sync --force --no-history
+        gclient sync --force 
 
     - name: "🛠️ Bước 7: TIẾN HÀNH ĐÈ FILE MOD (Tắt Update & Sửa Phím)"
       run: |
