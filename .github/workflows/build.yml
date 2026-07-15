@@ -47,15 +47,15 @@ jobs:
         git clone https://chromium.googlesource.com/chromium/tools/depot_tools.git $HOME/depot_tools
         echo "$HOME/depot_tools" >> $GITHUB_PATH
 
-    - name: "📦 Bước 6: Đồng bộ nguồn TizenTubeCobalt gốc (Bản sửa lỗi sync)"
+    - name: "📦 Bước 6: Đồng bộ nguồn TizenTubeCobalt gốc (Bản siêu tối ưu dung lượng)"
       run: |
         mkdir -p ~/cobalt-build
         cd ~/cobalt-build
         
-        # 1. Tự tay clone sâu 1 tầng (shallow clone) CHỈ RIÊNG repo chính để tiết kiệm 30GB ổ cứng
+        # 1. Chỉ lấy duy nhất code bản mới nhất của repo chính
         git clone --depth=1 https://github.com/reisxd/TizenTubeCobalt.git src
         
-        # 2. Tạo file cấu hình .gclient trỏ vào thư mục src vừa clone
+        # 2. Tạo file .gclient và LIỆT KÊ BLACKLIST (None) các thư mục rác khổng lồ để cấm tải về
         cat <<EOF > .gclient
         solutions = [
           {
@@ -63,15 +63,21 @@ jobs:
             "url": "https://github.com/reisxd/TizenTubeCobalt.git",
             "deps_file": "DEPS",
             "managed": False,
-            "custom_deps": {},
+            "custom_deps": {
+              "src/third_party/catapult": None,
+              "src/third_party/android_deps": None,
+              "src/content/test/data": None,
+              "src/media/test/data": None,
+              "src/third_party/blink/perf_tests": None,
+              "src/third_party/hunspell_dictionaries": None,
+            },
           },
         ]
         target_os = ["linux"]
         EOF
         
-        # 3. Cho gclient sync nốt các thư viện con (dell sợ lỗi commit SHA, dell lo tràn ổ cứng!)
+        # 3. Cho gclient sync chạy nhẹ nhàng gánh tạ
         gclient sync --force
-
     - name: "🛠️ Bước 7: TIẾN HÀNH ĐÈ FILE MOD (Tắt Update & Sửa Phím)"
       run: |
         # 1. Chạy script tắt update
