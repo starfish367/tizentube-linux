@@ -42,8 +42,8 @@ jobs:
 
     - name: 🌐 Tải depot_tools của Google
       run: |
-        git clone https://chromium.googlesource.com/chromium/tools/depot_tools.git ~/depot_tools
-        echo "PATH=$PATH:~/depot_tools" >> $GITHUB_ENV
+        git clone https://chromium.googlesource.com/chromium/tools/depot_tools.git $HOME/depot_tools
+        echo "$HOME/depot_tools" >> $GITHUB_PATH
 
     - name: 📦 Đồng bộ nguồn TizenTubeCobalt
       run: |
