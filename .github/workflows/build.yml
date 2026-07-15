@@ -1,4 +1,4 @@
-name: TizenTube Linux ARM64 Auto-Build (Android Dependency Stripped)
+name: TizenTube Linux ARM64 Auto-Build (Gperf Toolchain Fixed)
 
 on:
   workflow_dispatch: # Cho phép bấm nút chạy thủ công
@@ -31,10 +31,10 @@ jobs:
       with:
         path: custom-repo
 
-    - name: "🛠️ Bước 2: Cài đặt Toolchain & ccache"
+    - name: "🛠️ Bước 2: Cài đặt Toolchain & ccache (Đã thêm gperf, bison, flex)"
       run: |
         sudo apt update
-        sudo apt install -y git python3 python3-pip curl build-essential clang llvm lld ninja-build gcc-aarch64-linux-gnu g++-aarch64-linux-gnu ccache
+        sudo apt install -y git python3 python3-pip curl build-essential clang llvm lld ninja-build gcc-aarch64-linux-gnu g++-aarch64-linux-gnu ccache gperf bison flex
 
     - name: "💾 Bước 3: Khôi phục Cache cũ từ Workspace"
       uses: actions/cache@v4
@@ -91,7 +91,6 @@ jobs:
         echo "🔥 PHẪU THUẬT TRIỆT ĐỂ: Xóa tận gốc dòng Android rác..."
         BUGGY_GN="$SED_TARGET/third_party/blink/renderer/modules/cobalt/h5vcc_tizen_tube/BUILD.gn"
         if [ -f "$BUGGY_GN" ]; then
-          # Chấp mọi loại định dạng, xóa tất cả các dòng chứa android platform rác
           sed -i '/starboard\/android\/shared/d' "$BUGGY_GN"
           echo "✅ Đã xóa sổ hoàn toàn dòng lỗi! Nội dung file sau khi sửa:"
           cat "$BUGGY_GN"
@@ -101,12 +100,13 @@ jobs:
           echo "🎮 Đang đè file key_mapping.cc tùy biến..."
           cp $GITHUB_WORKSPACE/custom-repo/custom_files/key_mapping.cc $GITHUB_WORKSPACE/cobalt-build/src/starboard/shared/x11/key_mapping.cc
         fi
+
     - name: "🏗️ Bước 8: Tải Sysroot ARM64 & Tạo cấu hình GN"
       run: |
         cd $GITHUB_WORKSPACE/cobalt-build/src
         # Tải gói thư viện sysroot arm64
         python3 build/linux/sysroot_scripts/install-sysroot.py --arch=arm64
-        # Tiến hành gen file build (Khóa mõm check include + Tắt remote_exec ảo của Google)
+        # Tiến hành gen file build (Khóa mõm check include + Tắt remote_exec)
         python3 cobalt/build/gn.py -p evergreen-arm64 -c gold --no-check --args="ccache_enable=true use_remoteexec=false"
 
     - name: "🔥 Bước 9: Bắt đầu Biên dịch (Compile bằng Ninja)"
