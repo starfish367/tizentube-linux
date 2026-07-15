@@ -1,4 +1,4 @@
-name: TizenTube Linux ARM64 Auto-Build (GN Dependency Fixed)
+name: TizenTube Linux ARM64 Auto-Build (Sysroot Fixed)
 
 on:
   workflow_dispatch: # Cho phép bấm nút chạy thủ công
@@ -64,7 +64,7 @@ jobs:
         # 1. Chỉ lấy duy nhất code bản mới nhất của repo chính
         git clone --depth=1 https://github.com/reisxd/TizenTubeCobalt.git src
         
-        # 2. Tạo file cấu hình .gclient chuẩn (Bỏ phần custom_deps gây thiếu file BUILD.gn)
+        # 2. Tạo file cấu hình .gclient chuẩn
         cat <<EOF > .gclient
         solutions = [
           {
@@ -93,9 +93,12 @@ jobs:
           cp $GITHUB_WORKSPACE/custom-repo/custom_files/key_mapping.cc $GITHUB_WORKSPACE/cobalt-build/src/starboard/shared/x11/key_mapping.cc
         fi
 
-    - name: "🏗️ Bước 8: Tạo cấu hình GN"
+    - name: "🏗️ Bước 8: Tải Sysroot ARM64 & Tạo cấu hình GN"
       run: |
         cd $GITHUB_WORKSPACE/cobalt-build/src
+        # Tải gói thư viện sysroot arm64 bắt buộc để sửa lỗi nghẽn GN
+        python3 build/linux/sysroot_scripts/install-sysroot.py --arch=arm64
+        # Tiến hành gen file build
         python3 cobalt/build/gn.py -p evergreen-arm64 -c gold --args="ccache_enable=true"
 
     - name: "🔥 Bước 9: Bắt đầu Biên dịch (Compile bằng Ninja)"
