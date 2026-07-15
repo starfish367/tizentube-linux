@@ -1,4 +1,4 @@
-name: TizenTube Linux ARM64 Auto-Build (No Space Error Fixed)
+name: TizenTube Linux ARM64 Auto-Build (Platform Fixed)
 
 on:
   workflow_dispatch: # Cho phép bấm nút chạy thủ công
@@ -18,7 +18,7 @@ jobs:
     - name: "🧹 Dọn dẹp ổ cứng lấy 85GB trống (Để lại 15GB cho Root thở)"
       uses: easimon/maximize-build-space@v10
       with:
-        root-reserve-mb: 15360 # GIỮ LẠI 15GB TRỐNG TRÊN ROOT (Tránh lỗi No space left on device hệ thống)
+        root-reserve-mb: 15360 # Giữ lại 15GB trên Root tránh nghẹt log hệ thống
         temp-reserve-mb: 1024
         remove-dotnet: 'true'
         remove-android: 'true'
@@ -51,7 +51,7 @@ jobs:
         ccache --max-size=8G
         ccache --set-config=compression=true
 
-    - name: "🌐 Bước 5: Tải depot_tools của Google (Đưa hẳn vào Workspace)"
+    - name: "🌐 Bước 5: Tải depot_tools của Google"
       run: |
         git clone https://chromium.googlesource.com/chromium/tools/depot_tools.git $GITHUB_WORKSPACE/depot_tools
         echo "$GITHUB_WORKSPACE/depot_tools" >> $GITHUB_PATH
@@ -61,7 +61,7 @@ jobs:
         mkdir -p $GITHUB_WORKSPACE/cobalt-build
         cd $GITHUB_WORKSPACE/cobalt-build
         
-        # 1. Chỉ lấy duy nhất code bản mới nhất của repo chính (Shallow clone)
+        # 1. Chỉ lấy duy nhất code bản mới nhất của repo chính
         git clone --depth=1 https://github.com/reisxd/TizenTubeCobalt.git src
         
         # 2. Tạo file cấu hình .gclient và chặn các thư mục rác
@@ -85,7 +85,7 @@ jobs:
         target_os = ["linux"]
         EOF
         
-        # 3. Chạy gclient sync (Có thêm --no-history giúp tải siêu nhanh vì đã chuyển phân vùng)
+        # 3. Đồng bộ hóa nguồn siêu tốc
         gclient sync --force --no-history
 
     - name: "🛠️ Bước 7: TIẾN HÀNH ĐÈ FILE MOD trực tiếp bằng lệnh Workflow"
@@ -101,17 +101,17 @@ jobs:
           cp $GITHUB_WORKSPACE/custom-repo/custom_files/key_mapping.cc $GITHUB_WORKSPACE/cobalt-build/src/starboard/shared/x11/key_mapping.cc
         fi
 
-    - name: "🏗️ Bước 8: Tạo cấu hình GN"
+    - name: "🏗️ Bước 8: Tạo cấu hình GN (Đổi sang profile evergreen-arm64 chuẩn chỉ)"
       run: |
         cd $GITHUB_WORKSPACE/cobalt-build/src
-        python3 cobalt/build/gn.py -p linux-modular -c gold --target_arch=arm64 --args="ccache_enable=true"
+        python3 cobalt/build/gn.py -p evergreen-arm64 -c gold --args="ccache_enable=true"
 
-    - name: "🔥 Bước 9: Bắt đầu Biên dịch (Compile dùng vùng Workspace)"
+    - name: "🔥 Bước 9: Bắt đầu Biên dịch (Compile bằng Ninja)"
       run: |
         cd $GITHUB_WORKSPACE/cobalt-build/src
         export CC="ccache clang"
         export CXX="ccache clang++"
-        ninja -j $(nproc) -C out/linux-modular_gold/ cobalt
+        ninja -j $(nproc) -C out/evergreen-arm64_gold/ cobalt
 
     - name: "📦 Bước 10: Đóng gói thành file .deb"
       if: success()
@@ -121,7 +121,7 @@ jobs:
         
         echo -e "Package: tizentube-cobalt\nVersion: 2.0.2\nArchitecture: arm64\nMaintainer: starfish367\nDescription: Customized TizenTube for Armbian" > $GITHUB_WORKSPACE/tizentube-deb/DEBIAN/control
         
-        cp -r $GITHUB_WORKSPACE/cobalt-build/src/out/linux-modular_gold/* $GITHUB_WORKSPACE/tizentube-deb/opt/tizentube/
+        cp -r $GITHUB_WORKSPACE/cobalt-build/src/out/evergreen-arm64_gold/* $GITHUB_WORKSPACE/tizentube-deb/opt/tizentube/
         
         dpkg-deb --build --root-owner-group $GITHUB_WORKSPACE/tizentube-deb
         mv $GITHUB_WORKSPACE/tizentube-deb.deb $GITHUB_WORKSPACE/tizentube-linux-arm64.deb
