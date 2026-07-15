@@ -67,7 +67,7 @@ jobs:
         EOF
         
         # Tiến hành đồng bộ nguồn (bỏ qua lịch sử git cũ để nhẹ máy ảo hơn nữa)
-        gclient sync --force --no-history
+        gclient sync --force
 
     - name: "🛠️ Bước 7: TIẾN HÀNH ĐÈ FILE MOD (Tắt Update & Sửa Phím)"
       run: |
