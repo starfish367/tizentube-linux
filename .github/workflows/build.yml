@@ -1,7 +1,7 @@
-name: TizenTube Linux ARM64 Auto-Build
+name: TizenTube Linux ARM64 Auto-Build (Customized)
 
 on:
-  workflow_dispatch: # Cho phép bạn bấm nút Run thủ công trên web GitHub
+  workflow_dispatch: # Cho phép bấm nút chạy thủ công
 
 jobs:
   build-arm64:
@@ -19,15 +19,17 @@ jobs:
         remove-codeql: 'true'
         remove-docker-images: 'true'
 
-    - name: 📥 Checkout Code
+    - name: 📥 Bước 1: Tải Repo Mod của bạn (starfish367/tizentube-linux)
       uses: actions/checkout@v4
+      with:
+        path: custom-repo # Tải vào thư mục riêng để tí nữa copy đè
 
-    - name: 🛠️ Cài đặt Toolchain & ccache
+    - name: 🛠️ Bước 2: Cài đặt Toolchain & ccache
       run: |
         sudo apt update
         sudo apt install -y git python3 python3-pip curl build-essential clang llvm lld ninja-build gcc-aarch64-linux-gnu g++-aarch64-linux-gnu ccache
 
-    - name: 💾 Khôi phục Cache cũ (Nếu có)
+    - name: 💾 Bước 3: Khôi phục Cache cũ (Nếu có)
       uses: actions/cache@v4
       with:
         path: ~/.ccache
@@ -35,59 +37,61 @@ jobs:
         restore-keys: |
           cobalt-arm64-ccache-
 
-    - name: ⚙️ Cấu hình ccache
+    - name: ⚙️ Bước 4: Cấu hình ccache
       run: |
         ccache --max-size=8G
         ccache --set-config=compression=true
 
-    - name: 🌐 Tải depot_tools của Google
+    - name: 🌐 Bước 5: Tải depot_tools của Google (Đường dẫn tuyệt đối)
       run: |
         git clone https://chromium.googlesource.com/chromium/tools/depot_tools.git $HOME/depot_tools
         echo "$HOME/depot_tools" >> $GITHUB_PATH
 
-    - name: 📦 Đồng bộ nguồn TizenTubeCobalt
+    - name: 📦 Bước 6: Đồng bộ nguồn TizenTubeCobalt gốc (Bản sửa lỗi sync)
       run: |
         mkdir -p ~/cobalt-build
         cd ~/cobalt-build
         gclient config --name=src https://github.com/reisxd/TizenTubeCobalt.git
-        gclient sync --force --ops-to-write
+        gclient sync --force --no-history
 
-    - name: 🏗️ Tạo cấu hình GN dùng ccache
+    - name: 🛠️ Bước 7: TIẾN HÀNH ĐÈ FILE MOD (Tắt Update & Sửa Phím)
+      run: |
+        # 1. Chạy script tắt update
+        chmod +x $GITHUB_WORKSPACE/custom-repo/custom_files/disable_update.sh
+        $GITHUB_WORKSPACE/custom-repo/custom_files/disable_update.sh
+        
+      
+
+    - name: 🏗️ Bước 8: Tạo cấu hình GN dùng ccache
       run: |
         cd ~/cobalt-build/src
-        # Ép GN sử dụng ccache để tăng tốc các lần build sau
         python3 cobalt/build/gn.py -p linux-modular -c gold --target_arch=arm64 --args="ccache_enable=true"
 
-    - name: 🔥 Tiến hành Biên dịch (Compile)
+    - name: 🔥 Bước 9: Bắt đầu Biên dịch (Compile)
       run: |
         cd ~/cobalt-build/src
-        # Dùng ccache bọc ngoài trình biên dịch
         export CC="ccache clang"
         export CXX="ccache clang++"
         ninja -j $(nproc) -C out/linux-modular_gold/ cobalt
 
-    - name: 📦 Đóng gói thành file .deb
+    - name: 📦 Bước 10: Đóng gói thành file .deb
       if: success()
       run: |
-        # Tạo cấu hình debian
         mkdir -p ~/tizentube-deb/DEBIAN
         mkdir -p ~/tizentube-deb/opt/tizentube
         
-        # Viết file control
-        echo -e "Package: tizentube-cobalt\nVersion: 2.0.2\nArchitecture: arm64\nMaintainer: you\nDescription: TizenTube for Armbian" > ~/tizentube-deb/DEBIAN/control
+        echo -e "Package: tizentube-cobalt\nVersion: 2.0.2\nArchitecture: arm64\nMaintainer: starfish367\nDescription: Customized TizenTube for Armbian (No Update, Custom Keymap)" > ~/tizentube-deb/DEBIAN/control
         
-        # Copy sản phẩm đã build vào gói
         cp -r ~/cobalt-build/src/out/linux-modular_gold/* ~/tizentube-deb/opt/tizentube/
         
-        # Đóng gói
         dpkg-deb --build --root-owner-group ~/tizentube-deb
         mv ~/tizentube-deb.deb ./tizentube-linux-arm64.deb
 
-    - name: 🚀 Đẩy file .deb lên Release
+    - name: 🚀 Bước 11: Đẩy file .deb tùy biến lên Release của starfish367
       if: success()
       uses: softprops/action-gh-release@v2
       with:
-        tag_name: v2.0.2-armbian
+        tag_name: v2.0.2-custom
         files: ./tizentube-linux-arm64.deb
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
