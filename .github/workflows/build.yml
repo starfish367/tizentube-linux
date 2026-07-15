@@ -1,4 +1,4 @@
-name: TizenTube Linux ARM64 Auto-Build (Sysroot Fixed)
+name: TizenTube Linux ARM64 Auto-Build (Android Dependency Stripped)
 
 on:
   workflow_dispatch: # Cho phép bấm nút chạy thủ công
@@ -56,7 +56,7 @@ jobs:
         git clone https://chromium.googlesource.com/chromium/tools/depot_tools.git $GITHUB_WORKSPACE/depot_tools
         echo "$GITHUB_WORKSPACE/depot_tools" >> $GITHUB_PATH
 
-    - name: "📦 Bước 6: Đồng bộ nguồn TizenTubeCobalt vào Workspace (Bản chuẩn dependencies)"
+    - name: "📦 Bước 6: Đồng bộ nguồn TizenTubeCobalt vào Workspace"
       run: |
         mkdir -p $GITHUB_WORKSPACE/cobalt-build
         cd $GITHUB_WORKSPACE/cobalt-build
@@ -77,10 +77,10 @@ jobs:
         target_os = ["linux"]
         EOF
         
-        # 3. Đồng bộ hóa nguồn siêu tốc (đầy đủ file nền tảng Linux)
+        # 3. Đồng bộ hóa nguồn siêu tốc
         gclient sync --force --no-history
 
-    - name: "🛠️ Bước 7: TIẾN HÀNH ĐÈ FILE MOD trực tiếp bằng lệnh Workflow"
+    - name: "🛠️ Bước 7: TIẾN HÀNH ĐÈ FILE MOD & SỬA LỖI CODE REPO GỐC"
       run: |
         SED_TARGET="$GITHUB_WORKSPACE/cobalt-build/src"
         echo "⚙️ Vô hiệu hóa Auto-Update..."
@@ -88,6 +88,15 @@ jobs:
         find $SED_TARGET -name "*.js" -exec sed -i 's/checkUpdate/function(){return false;}/g' {} +
         find $SED_TARGET -name "*.js" -exec sed -i 's|api.github.com/repos/reisxd/TizenTubeCobalt/releases|api.github.com/repos/starfish367/tizentube-linux/releases|g' {} +
         
+        echo "🔥 PHẪU THUẬT: Xóa bỏ dòng ghim dependency Android lỗi của tác giả..."
+        BUGGY_GN="$SED_TARGET/third_party/blink/renderer/modules/cobalt/h5vcc_tizen_tube/BUILD.gn"
+        if [ -f "$BUGGY_GN" ]; then
+          # Xóa bỏ đoạn liên kết đến android starboard platform để giải phóng cho bản Linux
+          sed -i 's|, "//starboard/android/shared:starboard_platform"||g' "$BUGGY_GN"
+          sed -i 's|"//starboard/android/shared:starboard_platform"||g' "$BUGGY_GN"
+          echo "✅ Đã triệt hạ dòng code lỗi Android!"
+        fi
+
         if [ -f "$GITHUB_WORKSPACE/custom-repo/custom_files/key_mapping.cc" ]; then
           echo "🎮 Đang đè file key_mapping.cc tùy biến..."
           cp $GITHUB_WORKSPACE/custom-repo/custom_files/key_mapping.cc $GITHUB_WORKSPACE/cobalt-build/src/starboard/shared/x11/key_mapping.cc
@@ -96,7 +105,7 @@ jobs:
     - name: "🏗️ Bước 8: Tải Sysroot ARM64 & Tạo cấu hình GN"
       run: |
         cd $GITHUB_WORKSPACE/cobalt-build/src
-        # Tải gói thư viện sysroot arm64 bắt buộc để sửa lỗi nghẽn GN
+        # Tải gói thư viện sysroot arm64
         python3 build/linux/sysroot_scripts/install-sysroot.py --arch=arm64
         # Tiến hành gen file build
         python3 cobalt/build/gn.py -p evergreen-arm64 -c gold --args="ccache_enable=true"
