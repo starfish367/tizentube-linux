@@ -1,4 +1,4 @@
-name: TizenTube Linux ARM64 Auto-Build (Customized)
+name: TizenTube Linux ARM64 Auto-Build (Fixed Paths)
 
 on:
   workflow_dispatch: # Cho phép bấm nút chạy thủ công
@@ -8,7 +8,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: "🧹 Dọn dẹp ổ cứng lấy 50GB trống"
+    - name: "🧹 Dọn dẹp ổ cứng lấy 100GB trống"
       uses: easimon/maximize-build-space@v10
       with:
         root-reserve-mb: 5120
@@ -22,40 +22,41 @@ jobs:
     - name: "📥 Bước 1: Tải Repo Mod của bạn (starfish367/tizentube-linux)"
       uses: actions/checkout@v4
       with:
-        path: custom-repo # Tải vào thư mục riêng để tí nữa copy đè
+        path: custom-repo
 
     - name: "🛠️ Bước 2: Cài đặt Toolchain & ccache"
       run: |
         sudo apt update
         sudo apt install -y git python3 python3-pip curl build-essential clang llvm lld ninja-build gcc-aarch64-linux-gnu g++-aarch64-linux-gnu ccache
 
-    - name: "💾 Bước 3: Khôi phục Cache cũ (Nếu có)"
+    - name: "💾 Bước 3: Khôi phục Cache cũ từ Workspace"
       uses: actions/cache@v4
       with:
-        path: ~/.ccache
+        path: ${{ github.workspace }}/.ccache
         key: cobalt-arm64-ccache-${{ github.run_id }}-${{ github.run_number }}
         restore-keys: |
           cobalt-arm64-ccache-
 
-    - name: "⚙️ Bước 4: Cấu hình ccache"
+    - name: "⚙️ Bước 4: Cấu hình ccache nằm trong vùng 101GB"
       run: |
+        export CCACHE_DIR="$GITHUB_WORKSPACE/.ccache"
         ccache --max-size=8G
         ccache --set-config=compression=true
 
-    - name: "🌐 Bước 5: Tải depot_tools của Google (Đường dẫn tuyệt đối)"
+    - name: "🌐 Bước 5: Tải depot_tools của Google"
       run: |
         git clone https://chromium.googlesource.com/chromium/tools/depot_tools.git $HOME/depot_tools
         echo "$HOME/depot_tools" >> $GITHUB_PATH
 
-    - name: "📦 Bước 6: Đồng bộ nguồn TizenTubeCobalt gốc (Bản siêu tối ưu dung lượng)"
+    - name: "📦 Bước 6: Đồng bộ nguồn TizenTubeCobalt vào mỏ vàng 101GB"
       run: |
-        mkdir -p ~/cobalt-build
-        cd ~/cobalt-build
+        mkdir -p $GITHUB_WORKSPACE/cobalt-build
+        cd $GITHUB_WORKSPACE/cobalt-build
         
-        # 1. Chỉ lấy duy nhất code bản mới nhất của repo chính
+        # Clone 1 tầng ngọn để siêu nhẹ
         git clone --depth=1 https://github.com/reisxd/TizenTubeCobalt.git src
         
-        # 2. Tạo file .gclient và LIỆT KÊ BLACKLIST (None) các thư mục rác khổng lồ để cấm tải về
+        # Tạo cấu hình .gclient cô lập platform rác
         cat <<EOF > .gclient
         solutions = [
           {
@@ -76,28 +77,30 @@ jobs:
         target_os = ["linux"]
         EOF
         
-        # 3. Cho gclient sync chạy nhẹ nhàng gánh tạ
         gclient sync --force
-    - name: "🛠️ Bước 7: TIẾN HÀNH ĐÈ FILE MOD (Tắt Update & Sửa Phím)"
+
+    - name: "🛠️ Bước 7: TIẾN HÀNH ĐÈ FILE MOD trực tiếp bằng lệnh Workflow"
       run: |
-        # 1. Chạy script tắt update
-        chmod +x $GITHUB_WORKSPACE/custom-repo/custom_files/disable_update.sh
-        $GITHUB_WORKSPACE/custom-repo/custom_files/disable_update.sh
+        SED_TARGET="$GITHUB_WORKSPACE/cobalt-build/src"
+        echo "⚙️ Vô hiệu hóa Auto-Update..."
+        find $SED_TARGET -name "*.js" -exec sed -i 's/checkForUpdates/function(){return false;}/g' {} +
+        find $SED_TARGET -name "*.js" -exec sed -i 's/checkUpdate/function(){return false;}/g' {} +
+        find $SED_TARGET -name "*.js" -exec sed -i 's|api.github.com/repos/reisxd/TizenTubeCobalt/releases|api.github.com/repos/starfish367/tizentube-linux/releases|g' {} +
         
-        # 2. Đè file keymap mới vào nguồn Cobalt
         if [ -f "$GITHUB_WORKSPACE/custom-repo/custom_files/key_mapping.cc" ]; then
           echo "🎮 Đang đè file key_mapping.cc tùy biến..."
-          cp $GITHUB_WORKSPACE/custom-repo/custom_files/key_mapping.cc ~/cobalt-build/src/starboard/shared/x11/key_mapping.cc
+          cp $GITHUB_WORKSPACE/custom-repo/custom_files/key_mapping.cc $GITHUB_WORKSPACE/cobalt-build/src/starboard/shared/x11/key_mapping.cc
         fi
 
-    - name: "🏗️ Bước 8: Tạo cấu hình GN dùng ccache"
+    - name: "🏗️ Bước 8: Tạo cấu hình GN"
       run: |
-        cd ~/cobalt-build/src
+        cd $GITHUB_WORKSPACE/cobalt-build/src
         python3 cobalt/build/gn.py -p linux-modular -c gold --target_arch=arm64 --args="ccache_enable=true"
 
-    - name: "🔥 Bước 9: Bắt đầu Biên dịch (Compile)"
+    - name: "🔥 Bước 9: Bắt đầu Biên dịch (Compile dùng vùng 101GB)"
       run: |
-        cd ~/cobalt-build/src
+        cd $GITHUB_WORKSPACE/cobalt-build/src
+        export CCACHE_DIR="$GITHUB_WORKSPACE/.ccache"
         export CC="ccache clang"
         export CXX="ccache clang++"
         ninja -j $(nproc) -C out/linux-modular_gold/ cobalt
@@ -105,21 +108,21 @@ jobs:
     - name: "📦 Bước 10: Đóng gói thành file .deb"
       if: success()
       run: |
-        mkdir -p ~/tizentube-deb/DEBIAN
-        mkdir -p ~/tizentube-deb/opt/tizentube
+        mkdir -p $GITHUB_WORKSPACE/tizentube-deb/DEBIAN
+        mkdir -p $GITHUB_WORKSPACE/tizentube-deb/opt/tizentube
         
-        echo -e "Package: tizentube-cobalt\nVersion: 2.0.2\nArchitecture: arm64\nMaintainer: starfish367\nDescription: Customized TizenTube for Armbian (No Update, Custom Keymap)" > ~/tizentube-deb/DEBIAN/control
+        echo -e "Package: tizentube-cobalt\nVersion: 2.0.2\nArchitecture: arm64\nMaintainer: starfish367\nDescription: Customized TizenTube for Armbian" > $GITHUB_WORKSPACE/tizentube-deb/DEBIAN/control
         
-        cp -r ~/cobalt-build/src/out/linux-modular_gold/* ~/tizentube-deb/opt/tizentube/
+        cp -r $GITHUB_WORKSPACE/cobalt-build/src/out/linux-modular_gold/* $GITHUB_WORKSPACE/tizentube-deb/opt/tizentube/
         
-        dpkg-deb --build --root-owner-group ~/tizentube-deb
-        mv ~/tizentube-deb.deb ./tizentube-linux-arm64.deb
+        dpkg-deb --build --root-owner-group $GITHUB_WORKSPACE/tizentube-deb
+        mv $GITHUB_WORKSPACE/tizentube-deb.deb $GITHUB_WORKSPACE/tizentube-linux-arm64.deb
 
-    - name: "🚀 Bước 11: Đẩy file .deb tùy biến lên Release của starfish367"
+    - name: "🚀 Bước 11: Đẩy file .deb lên Release"
       if: success()
       uses: softprops/action-gh-release@v2
       with:
         tag_name: v2.0.2-custom
-        files: ./tizentube-linux-arm64.deb
+        files: $GITHUB_WORKSPACE/tizentube-linux-arm64.deb
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
