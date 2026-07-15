@@ -51,8 +51,23 @@ jobs:
       run: |
         mkdir -p ~/cobalt-build
         cd ~/cobalt-build
-        gclient config --name=src https://github.com/reisxd/TizenTubeCobalt.git
-        gclient sync --force 
+        
+        # Tạo file cấu hình .gclient bằng tay để ÉP chỉ tải dependencies của Linux
+        cat <<EOF > .gclient
+        solutions = [
+          {
+            "name": "src",
+            "url": "https://github.com/reisxd/TizenTubeCobalt.git",
+            "deps_file": "DEPS",
+            "managed": False,
+            "custom_deps": {},
+          },
+        ]
+        target_os = ["linux"]
+        EOF
+        
+        # Tiến hành đồng bộ nguồn (bỏ qua lịch sử git cũ để nhẹ máy ảo hơn nữa)
+        gclient sync --force --no-history
 
     - name: "🛠️ Bước 7: TIẾN HÀNH ĐÈ FILE MOD (Tắt Update & Sửa Phím)"
       run: |
