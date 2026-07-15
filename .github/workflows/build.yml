@@ -88,20 +88,19 @@ jobs:
         find $SED_TARGET -name "*.js" -exec sed -i 's/checkUpdate/function(){return false;}/g' {} +
         find $SED_TARGET -name "*.js" -exec sed -i 's|api.github.com/repos/reisxd/TizenTubeCobalt/releases|api.github.com/repos/starfish367/tizentube-linux/releases|g' {} +
         
-        echo "🔥 PHẪU THUẬT: Xóa bỏ dòng ghim dependency Android lỗi của tác giả..."
+        echo "🔥 PHẪU THUẬT TRIỆT ĐỂ: Xóa tận gốc dòng Android rác..."
         BUGGY_GN="$SED_TARGET/third_party/blink/renderer/modules/cobalt/h5vcc_tizen_tube/BUILD.gn"
         if [ -f "$BUGGY_GN" ]; then
-          # Xóa bỏ đoạn liên kết đến android starboard platform để giải phóng cho bản Linux
-          sed -i 's|, "//starboard/android/shared:starboard_platform"||g' "$BUGGY_GN"
-          sed -i 's|"//starboard/android/shared:starboard_platform"||g' "$BUGGY_GN"
-          echo "✅ Đã triệt hạ dòng code lỗi Android!"
+          # Chấp mọi loại định dạng, xóa tất cả các dòng chứa android platform rác
+          sed -i '/starboard\/android\/shared/d' "$BUGGY_GN"
+          echo "✅ Đã xóa sổ hoàn toàn dòng lỗi! Nội dung file sau khi sửa:"
+          cat "$BUGGY_GN"
         fi
 
         if [ -f "$GITHUB_WORKSPACE/custom-repo/custom_files/key_mapping.cc" ]; then
           echo "🎮 Đang đè file key_mapping.cc tùy biến..."
           cp $GITHUB_WORKSPACE/custom-repo/custom_files/key_mapping.cc $GITHUB_WORKSPACE/cobalt-build/src/starboard/shared/x11/key_mapping.cc
         fi
-
     - name: "🏗️ Bước 8: Tải Sysroot ARM64 & Tạo cấu hình GN"
       run: |
         cd $GITHUB_WORKSPACE/cobalt-build/src
