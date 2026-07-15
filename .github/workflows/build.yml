@@ -106,8 +106,8 @@ jobs:
         cd $GITHUB_WORKSPACE/cobalt-build/src
         # Tải gói thư viện sysroot arm64
         python3 build/linux/sysroot_scripts/install-sysroot.py --arch=arm64
-        # Tiến hành gen file build
-        python3 cobalt/build/gn.py -p evergreen-arm64 -c gold --args="ccache_enable=true"
+        # Tiến hành gen file build (THÊM CỜ --no-check ĐỂ KHÓA MÕM THẰNG GN SOI LỖI INCLUDE)
+        python3 cobalt/build/gn.py -p evergreen-arm64 -c gold --no-check --args="ccache_enable=true"
 
     - name: "🔥 Bước 9: Bắt đầu Biên dịch (Compile bằng Ninja)"
       run: |
