@@ -1,17 +1,24 @@
-name: TizenTube Linux ARM64 Auto-Build (Fixed Paths)
+name: TizenTube Linux ARM64 Auto-Build (No Space Error Fixed)
 
 on:
   workflow_dispatch: # Cho phép bấm nút chạy thủ công
+
+# Ép toàn bộ các công cụ và bộ nhớ đệm di cư sang phân vùng lớn, tránh nghẽn Root
+env:
+  CCACHE_DIR: ${{ github.workspace }}/.ccache
+  CIPD_CACHE_DIR: ${{ github.workspace }}/.cipd_cache
+  VPYTHON_VIRTUALENV_ROOT: ${{ github.workspace }}/.vpython_cache
+  TMPDIR: ${{ github.workspace }}/tmp
 
 jobs:
   build-arm64:
     runs-on: ubuntu-latest
 
     steps:
-    - name: "🧹 Dọn dẹp ổ cứng lấy 100GB trống"
+    - name: "🧹 Dọn dẹp ổ cứng lấy 85GB trống (Để lại 15GB cho Root thở)"
       uses: easimon/maximize-build-space@v10
       with:
-        root-reserve-mb: 5120
+        root-reserve-mb: 15360 # GIỮ LẠI 15GB TRỐNG TRÊN ROOT (Tránh lỗi No space left on device hệ thống)
         temp-reserve-mb: 1024
         remove-dotnet: 'true'
         remove-android: 'true'
@@ -37,26 +44,27 @@ jobs:
         restore-keys: |
           cobalt-arm64-ccache-
 
-    - name: "⚙️ Bước 4: Cấu hình ccache nằm trong vùng 101GB"
+    - name: "⚙️ Bước 4: Khởi tạo các thư mục tạm trên Workspace"
       run: |
-        export CCACHE_DIR="$GITHUB_WORKSPACE/.ccache"
+        mkdir -p $TMPDIR
+        mkdir -p $CCACHE_DIR
         ccache --max-size=8G
         ccache --set-config=compression=true
 
-    - name: "🌐 Bước 5: Tải depot_tools của Google"
+    - name: "🌐 Bước 5: Tải depot_tools của Google (Đưa hẳn vào Workspace)"
       run: |
-        git clone https://chromium.googlesource.com/chromium/tools/depot_tools.git $HOME/depot_tools
-        echo "$HOME/depot_tools" >> $GITHUB_PATH
+        git clone https://chromium.googlesource.com/chromium/tools/depot_tools.git $GITHUB_WORKSPACE/depot_tools
+        echo "$GITHUB_WORKSPACE/depot_tools" >> $GITHUB_PATH
 
-    - name: "📦 Bước 6: Đồng bộ nguồn TizenTubeCobalt vào mỏ vàng 101GB"
+    - name: "📦 Bước 6: Đồng bộ nguồn TizenTubeCobalt vào Workspace (Bản siêu tốc)"
       run: |
         mkdir -p $GITHUB_WORKSPACE/cobalt-build
         cd $GITHUB_WORKSPACE/cobalt-build
         
-        # Clone 1 tầng ngọn để siêu nhẹ
+        # 1. Chỉ lấy duy nhất code bản mới nhất của repo chính (Shallow clone)
         git clone --depth=1 https://github.com/reisxd/TizenTubeCobalt.git src
         
-        # Tạo cấu hình .gclient cô lập platform rác
+        # 2. Tạo file cấu hình .gclient và chặn các thư mục rác
         cat <<EOF > .gclient
         solutions = [
           {
@@ -77,6 +85,7 @@ jobs:
         target_os = ["linux"]
         EOF
         
+        # 3. Chạy gclient sync (Có thêm --no-history giúp tải siêu nhanh vì đã chuyển phân vùng)
         gclient sync --force --no-history
 
     - name: "🛠️ Bước 7: TIẾN HÀNH ĐÈ FILE MOD trực tiếp bằng lệnh Workflow"
@@ -97,10 +106,9 @@ jobs:
         cd $GITHUB_WORKSPACE/cobalt-build/src
         python3 cobalt/build/gn.py -p linux-modular -c gold --target_arch=arm64 --args="ccache_enable=true"
 
-    - name: "🔥 Bước 9: Bắt đầu Biên dịch (Compile dùng vùng 101GB)"
+    - name: "🔥 Bước 9: Bắt đầu Biên dịch (Compile dùng vùng Workspace)"
       run: |
         cd $GITHUB_WORKSPACE/cobalt-build/src
-        export CCACHE_DIR="$GITHUB_WORKSPACE/.ccache"
         export CC="ccache clang"
         export CXX="ccache clang++"
         ninja -j $(nproc) -C out/linux-modular_gold/ cobalt
