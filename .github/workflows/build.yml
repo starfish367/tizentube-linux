@@ -52,7 +52,10 @@ jobs:
         mkdir -p ~/cobalt-build
         cd ~/cobalt-build
         
-        # Tạo file cấu hình .gclient bằng tay để ÉP chỉ tải dependencies của Linux
+        # 1. Tự tay clone sâu 1 tầng (shallow clone) CHỈ RIÊNG repo chính để tiết kiệm 30GB ổ cứng
+        git clone --depth=1 https://github.com/reisxd/TizenTubeCobalt.git src
+        
+        # 2. Tạo file cấu hình .gclient trỏ vào thư mục src vừa clone
         cat <<EOF > .gclient
         solutions = [
           {
@@ -66,7 +69,7 @@ jobs:
         target_os = ["linux"]
         EOF
         
-        # Tiến hành đồng bộ nguồn (bỏ qua lịch sử git cũ để nhẹ máy ảo hơn nữa)
+        # 3. Cho gclient sync nốt các thư viện con (dell sợ lỗi commit SHA, dell lo tràn ổ cứng!)
         gclient sync --force
 
     - name: "🛠️ Bước 7: TIẾN HÀNH ĐÈ FILE MOD (Tắt Update & Sửa Phím)"
