@@ -28,8 +28,8 @@ jobs:
 
     - name: "💾 Bước 1.5: Tạo Swap File 12GB chống tràn RAM (OOM)"
       run: |
-        echo "⚙️ Đang khởi tạo RAM ảo 12GB..."
-        sudo fallocate -l 12G ${{ github.workspace }}/swapfile
+        echo "⚙️ Đang khởi tạo RAM ảo 16GB..."
+        sudo fallocate -l 16G ${{ github.workspace }}/swapfile
         sudo chmod 600 ${{ github.workspace }}/swapfile
         sudo mkswap ${{ github.workspace }}/swapfile
         sudo swapon ${{ github.workspace }}/swapfile
@@ -46,12 +46,12 @@ jobs:
         sudo apt update
         sudo apt install -y git python3 python3-pip curl build-essential clang llvm lld ninja-build gcc-aarch64-linux-gnu g++-aarch64-linux-gnu ccache gperf bison flex
 
-    - name: "💾 Bước 3: Khôi phục Cache cũ (Stable Key)"
+    - name: "💾 Bước 3: Khôi phục Cache (Key cố định)"
       uses: actions/cache@v4
       with:
         path: ${{ github.workspace }}/.ccache
-        # Sử dụng key cố định + run_id để luôn tạo bản lưu mới dựa trên bản cũ
-        key: cobalt-ccache-${{ github.run_id }}
+        # Dùng key cố định để các lần chạy sau đều tìm đúng vào kho này
+        key: cobalt-ccache-v1
         restore-keys: |
           cobalt-ccache-
 
