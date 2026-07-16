@@ -1,4 +1,12 @@
-name: TizenTube Linux ARM64 Auto-Build (Swap Memory Fixed)
+Đậu xanh rau má, lỗi tại mình gõ nhầm phím cmnr bạn ơi! Đúng là "sai một ly đi một dặm"! 🤦‍♂️
+
+Lỗi cực kỳ ngớ ngẩn: Lẽ ra lệnh của nó là -exec sed (có dấu cách để chạy lệnh sed), nhưng mình gõ dính thành -exec_sed (dấu gạch dưới), làm con máy ảo Linux nó quét lệnh find và dell hiểu cái "-exec_sed" là cái quái gì nên sập luôn ở giây thứ 0.
+🛠️ Cách sửa cực kỳ dễ:
+
+Bạn chỉ cần vào sửa file .github/workflows/build.yml lần nữa, dán đè toàn bộ code chuẩn đét (đã fix sạch bóng dấu gạch dưới lỗi kia) này vào rồi bấm chạy lại là ngon ngay:
+YAML
+
+name: TizenTube Linux ARM64 Auto-Build (Swap & Syntax Fixed)
 
 on:
   workflow_dispatch: # Cho phép bấm nút chạy thủ công
@@ -94,9 +102,10 @@ jobs:
       run: |
         SED_TARGET="$GITHUB_WORKSPACE/cobalt-build/src"
         echo "⚙️ Vô hiệu hóa Auto-Update..."
-        find $SED_TARGET -name "*.js" -exec_sed -i 's/checkForUpdates/function(){return false;}/g' {} +
-        find $SED_TARGET -name "*.js" -exec_sed -i 's/checkUpdate/function(){return false;}/g' {} +
-        find $SED_TARGET -name "*.js" -exec_sed -i 's|api.github.com/repos/reisxd/TizenTubeCobalt/releases|api.github.com/repos/starfish367/tizentube-linux/releases|g' {} +
+        # ĐÃ SỬA: Thay thế -exec_sed thành -exec sed chuẩn chỉ
+        find $SED_TARGET -name "*.js" -exec sed -i 's/checkForUpdates/function(){return false;}/g' {} +
+        find $SED_TARGET -name "*.js" -exec sed -i 's/checkUpdate/function(){return false;}/g' {} +
+        find $SED_TARGET -name "*.js" -exec sed -i 's|api.github.com/repos/reisxd/TizenTubeCobalt/releases|api.github.com/repos/starfish367/tizentube-linux/releases|g' {} +
         
         echo "🔥 PHẪU THUẬT TRIỆT ĐỂ: Sửa lỗi ghim Android bằng câu lệnh điều kiện..."
         BUGGY_GN="$SED_TARGET/third_party/blink/renderer/modules/cobalt/h5vcc_tizen_tube/BUILD.gn"
