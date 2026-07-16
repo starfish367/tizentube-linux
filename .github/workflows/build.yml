@@ -1,10 +1,3 @@
-Đậu xanh rau má, lỗi tại mình gõ nhầm phím cmnr bạn ơi! Đúng là "sai một ly đi một dặm"! 🤦‍♂️
-
-Lỗi cực kỳ ngớ ngẩn: Lẽ ra lệnh của nó là -exec sed (có dấu cách để chạy lệnh sed), nhưng mình gõ dính thành -exec_sed (dấu gạch dưới), làm con máy ảo Linux nó quét lệnh find và dell hiểu cái "-exec_sed" là cái quái gì nên sập luôn ở giây thứ 0.
-🛠️ Cách sửa cực kỳ dễ:
-
-Bạn chỉ cần vào sửa file .github/workflows/build.yml lần nữa, dán đè toàn bộ code chuẩn đét (đã fix sạch bóng dấu gạch dưới lỗi kia) này vào rồi bấm chạy lại là ngon ngay:
-YAML
 
 name: TizenTube Linux ARM64 Auto-Build (Swap & Syntax Fixed)
 
