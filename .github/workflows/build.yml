@@ -26,13 +26,15 @@ jobs:
         remove-codeql: 'true'
         remove-docker-images: 'true'
 
-    - name: "💾 Bước 1.5: Tạo Swap File 16GB & Zram 4GB chống tràn RAM"
+    - name: "💾 Bước 1.5: Tạo Swap File 16GB chống tràn RAM (OOM)"
       run: |
         echo "⚙️ Đang khởi tạo RAM ảo Swap File 16GB..."
         sudo fallocate -l 16G ${{ github.workspace }}/swapfile
         sudo chmod 600 ${{ github.workspace }}/swapfile
         sudo mkswap ${{ github.workspace }}/swapfile
         sudo swapon ${{ github.workspace }}/swapfile
+        echo "✅ Đã kích hoạt Swap 16GB thành công! Kiểm tra bộ nhớ hiện tại:"
+        free -h
         
         echo "⚙️ Đang khởi tạo Zram 4GB (nén dữ liệu trên RAM)..."
         sudo modprobe zram
