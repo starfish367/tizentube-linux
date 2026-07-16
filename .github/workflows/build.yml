@@ -90,7 +90,7 @@ jobs:
         # 3. Đồng bộ hóa nguồn siêu tốc
         gclient sync --force --no-history
 
-    - name: "🛠️ Bước 7: TIẾN HÀNH ĐÈ FILE MOD & SỬA LỖI CODE REPO GỐC"
+    - name: "🛠️ Bước 7: TIẾN HÀNH ĐÈ FILE MOD & XÓA LỖI CODE REPO GỐC"
       run: |
         SED_TARGET="$GITHUB_WORKSPACE/cobalt-build/src"
         echo "⚙️ Vô hiệu hóa Auto-Update..."
@@ -98,40 +98,12 @@ jobs:
         find $SED_TARGET -name "*.js" -exec sed -i 's/checkUpdate/function(){return false;}/g' {} +
         find $SED_TARGET -name "*.js" -exec sed -i 's|api.github.com/repos/reisxd/TizenTubeCobalt/releases|api.github.com/repos/starfish367/tizentube-linux/releases|g' {} +
         
-        echo "🔥 PHẪU THUẬT TRIỆT ĐỂ: Sửa lỗi ghim Android bằng printf an toàn..."
+        echo "🔥 PHẪU THUẬT: Cắt bỏ thư viện Android gây lỗi..."
         BUGGY_GN="$SED_TARGET/third_party/blink/renderer/modules/cobalt/h5vcc_tizen_tube/BUILD.gn"
         if [ -f "$BUGGY_GN" ]; then
-          # Sử dụng printf line-by-line để ghi file sạch sẽ, không lo lỗi khoảng trắng của YAML
-          printf '%s\n' \
-            '# Copyright 2024 The Cobalt Authors. All Rights Reserved.' \
-            '#' \
-            '# Licensed under the Apache License, Version 2.0 (the "License");' \
-            '# you may not use this file except in compliance with the License.' \
-            '# you may obtain a copy of the License at' \
-            '#' \
-            '#     http://www.apache.org/licenses/LICENSE-2.0' \
-            '#' \
-            '# Unless required by applicable law or agreed to in writing, software' \
-            '# distributed under the License is distributed on an "AS IS" BASIS,' \
-            '# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.' \
-            '# See the License for the specific language governing permissions and' \
-            '# limitations under the License.' \
-            '' \
-            'target(starboard_level_gtest_target_type, "h5vcc_tizen_tube") {' \
-            '  sources = [' \
-            '    "h5vcc_tizen_tube.cc",' \
-            '    "h5vcc_tizen_tube.h",' \
-            '  ]' \
-            '' \
-            '  deps = [' \
-            '    "//cobalt/browser/h5vcc_tizentube/public/mojom:mojom_blink",' \
-            '  ]' \
-            '' \
-            '  if (is_android) {' \
-            '    deps += [ "//starboard/android/shared:starboard_platform" ]' \
-            '  }' \
-            '}' > "$BUGGY_GN"
-          echo "✅ Đã áp dụng bản vá lỗi xịn xò 10/10!"
+          # Xóa bỏ dòng chứa thư viện Android gây lỗi, giữ nguyên file nguồn gốc
+          sed -i '/starboard\/android\/shared:starboard_platform/d' "$BUGGY_GN"
+          echo "✅ Đã cắt bỏ thành công, Ninja sẽ không còn báo lỗi missing nữa!"
         fi
 
         if [ -f "$GITHUB_WORKSPACE/custom-repo/custom_files/key_mapping.cc" ]; then
