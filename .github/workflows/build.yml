@@ -46,13 +46,14 @@ jobs:
         sudo apt update
         sudo apt install -y git python3 python3-pip curl build-essential clang llvm lld ninja-build gcc-aarch64-linux-gnu g++-aarch64-linux-gnu ccache gperf bison flex
 
-    - name: "💾 Bước 3: Khôi phục Cache cũ từ Workspace"
+    - name: "💾 Bước 3: Khôi phục Cache cũ (Stable Key)"
       uses: actions/cache@v4
       with:
         path: ${{ github.workspace }}/.ccache
-        key: cobalt-arm64-ccache-${{ github.run_id }}-${{ github.run_number }}
+        # Sử dụng key cố định + run_id để luôn tạo bản lưu mới dựa trên bản cũ
+        key: cobalt-ccache-${{ github.run_id }}
         restore-keys: |
-          cobalt-arm64-ccache-
+          cobalt-ccache-
 
     - name: "⚙️ Bước 4: Khởi tạo các thư mục tạm trên Workspace"
       run: |
