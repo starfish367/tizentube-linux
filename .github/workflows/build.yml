@@ -1,4 +1,4 @@
-name: TizenTube Linux ARM64 Auto-Build (Gperf Toolchain Fixed)
+name: TizenTube Linux ARM64 Auto-Build (Swap Memory Fixed)
 
 on:
   workflow_dispatch: # Cho phép bấm nút chạy thủ công
@@ -25,6 +25,16 @@ jobs:
         remove-haskell: 'true'
         remove-codeql: 'true'
         remove-docker-images: 'true'
+
+    - name: "💾 Bước 1.5: Tạo Swap File 12GB chống tràn RAM (OOM)"
+      run: |
+        echo "⚙️ Đang khởi tạo RAM ảo 12GB..."
+        sudo fallocate -l 12G ${{ github.workspace }}/swapfile
+        sudo chmod 600 ${{ github.workspace }}/swapfile
+        sudo mkswap ${{ github.workspace }}/swapfile
+        sudo swapon ${{ github.workspace }}/swapfile
+        echo "✅ Đã kích hoạt Swap thành công! Kiểm tra bộ nhớ hiện tại:"
+        free -h
 
     - name: "📥 Bước 1: Tải Repo Mod của bạn (starfish367/tizentube-linux)"
       uses: actions/checkout@v4
@@ -84,16 +94,45 @@ jobs:
       run: |
         SED_TARGET="$GITHUB_WORKSPACE/cobalt-build/src"
         echo "⚙️ Vô hiệu hóa Auto-Update..."
-        find $SED_TARGET -name "*.js" -exec sed -i 's/checkForUpdates/function(){return false;}/g' {} +
-        find $SED_TARGET -name "*.js" -exec sed -i 's/checkUpdate/function(){return false;}/g' {} +
-        find $SED_TARGET -name "*.js" -exec sed -i 's|api.github.com/repos/reisxd/TizenTubeCobalt/releases|api.github.com/repos/starfish367/tizentube-linux/releases|g' {} +
+        find $SED_TARGET -name "*.js" -exec_sed -i 's/checkForUpdates/function(){return false;}/g' {} +
+        find $SED_TARGET -name "*.js" -exec_sed -i 's/checkUpdate/function(){return false;}/g' {} +
+        find $SED_TARGET -name "*.js" -exec_sed -i 's|api.github.com/repos/reisxd/TizenTubeCobalt/releases|api.github.com/repos/starfish367/tizentube-linux/releases|g' {} +
         
-        echo "🔥 PHẪU THUẬT TRIỆT ĐỂ: Xóa tận gốc dòng Android rác..."
+        echo "🔥 PHẪU THUẬT TRIỆT ĐỂ: Sửa lỗi ghim Android bằng câu lệnh điều kiện..."
         BUGGY_GN="$SED_TARGET/third_party/blink/renderer/modules/cobalt/h5vcc_tizen_tube/BUILD.gn"
         if [ -f "$BUGGY_GN" ]; then
-          sed -i '/starboard\/android\/shared/d' "$BUGGY_GN"
-          echo "✅ Đã xóa sổ hoàn toàn dòng lỗi! Nội dung file sau khi sửa:"
-          cat "$BUGGY_GN"
+          # Thay thế deps cứng thành đoạn code điều kiện chuẩn chỉ cho cả Android và Linux
+          cat << 'EOF' > "$BUGGY_GN"
+          # Copyright 2024 The Cobalt Authors. All Rights Reserved.
+          #
+          # Licensed under the Apache License, Version 2.0 (the "License");
+          # you may not use this file except in compliance with the License.
+          # You may obtain a copy of the License at
+          #
+          #     http://www.apache.org/licenses/LICENSE-2.0
+          #
+          # Unless required by applicable law or agreed to in writing, software
+          # distributed under the License is distributed on an "AS IS" BASIS,
+          # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+          # See the License for the specific language governing permissions and
+          # limitations under the License.
+
+          target(starboard_level_gtest_target_type, "h5vcc_tizen_tube") {
+            sources = [
+              "h5vcc_tizen_tube.cc",
+              "h5vcc_tizen_tube.h",
+            ]
+
+            deps = [
+              "//cobalt/browser/h5vcc_tizentube/public/mojom:mojom_blink",
+            ]
+
+            if (is_android) {
+              deps += [ "//starboard/android/shared:starboard_platform" ]
+            }
+          }
+          EOF
+          echo "✅ Đã áp dụng bản vá lỗi xịn xò 10/10!"
         fi
 
         if [ -f "$GITHUB_WORKSPACE/custom-repo/custom_files/key_mapping.cc" ]; then
