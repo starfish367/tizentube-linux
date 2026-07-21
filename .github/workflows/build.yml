@@ -118,7 +118,7 @@ jobs:
         # Tải gói thư viện sysroot arm64
         python3 build/linux/sysroot_scripts/install-sysroot.py --arch=arm64
         # Tiến hành gen file build (Khóa mõm check include + Tắt remote_exec)
-        python3 cobalt/build/gn.py -p evergreen-arm64 -c gold --no-check --args="ccache_enable=true use_remoteexec=false"
+        python3 cobalt/build/gn.py -p evergreen-arm64 -c gold --no-check --args="ccache_enable=true use_remoteexec=false concurrent_links=1"
 
     - name: "🔥 Bước 9: Bắt đầu Biên dịch (Compile bằng Ninja)"
       run: |
@@ -126,7 +126,10 @@ jobs:
         export CC="ccache clang"
         export CXX="ccache clang++"
         # Gọi trực tiếp Ninja của hệ thống Ubuntu để chặn đứng trò hề của depot_tools
-        /usr/bin/ninja -j $(nproc) -C out/evergreen-arm64_gold/ cobalt
+        /usr/bin/ninja -j 2 $(nproc) -C out/evergreen-arm64_gold/ cobalt
+        - name: "📊 Theo dõi RAM trong lúc build (background)"
+          run: |
+          (while true; do date; free -h; sleep 15; done) &
 
     - name: "📦 Bước 10: Đóng gói thành file .deb"
       if: success()
