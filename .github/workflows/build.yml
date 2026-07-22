@@ -126,7 +126,7 @@ jobs:
         export CC="ccache clang"
         export CXX="ccache clang++"
         # Gọi trực tiếp Ninja của hệ thống Ubuntu để chặn đứng trò hề của depot_tools
-        /usr/bin/ninja -j 2 $(nproc) -C out/evergreen-arm64_gold/ cobalt
+        /usr/bin/ninja -j 2 -C out/evergreen-arm64_gold/ cobalt
         - name: "📊 Theo dõi RAM trong lúc build (background)"
           run: |
           (while true; do date; free -h; sleep 15; done) &
