@@ -47,7 +47,7 @@ jobs:
         sudo apt install -y git python3 python3-pip curl build-essential clang llvm lld ninja-build gcc-aarch64-linux-gnu g++-aarch64-linux-gnu ccache gperf bison flex
 
     - name: "💾 Bước 3: Khôi phục Cache (Key cố định)"
-      uses: actions/cache@v4
+      uses: actions/cache/restore@v4
       with:
         path: ${{ github.workspace }}/.ccache
         # Dùng key cố định để các lần chạy sau đều tìm đúng vào kho này
@@ -122,14 +122,18 @@ jobs:
 
     - name: "🔥 Bước 9: Bắt đầu Biên dịch (Compile bằng Ninja)"
       run: |
-        cd $GITHUB_WORKSPACE/cobalt-build/src
-        export CC="ccache clang"
-        export CXX="ccache clang++"
-        # Gọi trực tiếp Ninja của hệ thống Ubuntu để chặn đứng trò hề của depot_tools
-        /usr/bin/ninja -j 2 -C out/evergreen-arm64_gold/ cobalt
-        - name: "📊 Theo dõi RAM trong lúc build (background)"
-          run: |
-          (while true; do date; free -h; sleep 15; done) &
+         cd $GITHUB_WORKSPACE/cobalt-build/src
+          export CC="ccache clang"
+          export CXX="ccache clang++"
+          /usr/bin/ninja -j 6 -C out/evergreen-arm64_gold/ cobalt
+
+    - name: "💾 Bước 9.5: LUÔN Lưu Cache (dù build fail/timeout)"
+      if: always()
+      uses: actions/cache/save@v4
+      with:
+          path: ${{ github.workspace }}/.ccache
+          key: cobalt-ccache-v1
+      
 
     - name: "📦 Bước 10: Đóng gói thành file .deb"
       if: success()
